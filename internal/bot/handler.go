@@ -125,9 +125,42 @@ func (h *BotHandler) handleCommand(message *tgbotapi.Message, user *storage.User
 		h.handleProfileCommand(message, user)
 	case "leaderboard":
 		h.handleLeaderboardCommand(message, user)
+	case "surrender", "menyerah":
+		h.handleSurrenderCommand(message, user)
 	}
 }
+
+func (h *BotHandler) handleSurrenderCommand(message *tgbotapi.Message, user *storage.User) {
+	puzzle, isActive := h.activePuzzles[message.Chat.ID]
+	if !isActive {
+		responseText := h.translator.Translate(user.LanguageCode, "no_active_puzzle", nil)
+		h.sendMessage(message.Chat.ID, responseText, "")
+		return
+	}
+
+	puzzle.RevealAll()
+	// 2. Render puzzle yang sudah lengkap
+	finalText := "`" + puzzle.RenderDisplay() + "`"
+	// 3. EDIT pesan puzzle yang asli
+	h.editMessage(message.Chat.ID, puzzle.MessageID, finalText, tgbotapi.ModeMarkdownV2)
+
+	// 4. Hapus sesi setelah semuanya selesai
+	delete(h.activePuzzles, message.Chat.ID)
+
+	params := map[string]string{"answer": puzzle.Solution}
+	responseText := h.translator.Translate(user.LanguageCode, "surrender_message", params)
+	h.sendMessage(message.Chat.ID, responseText, tgbotapi.ModeHTML)
+	
+}
+
 func (h *BotHandler) handleCryptoCommand(message *tgbotapi.Message, user *storage.User) {
+	if !message.Chat.IsPrivate() {
+		if _, ok := h.activePuzzles[message.Chat.ID]; ok {
+			responseText := h.translator.Translate(user.LanguageCode, "puzzle_in_progress", nil)
+			h.sendMessage(message.Chat.ID, responseText, "")
+			return
+		}
+	}
 	puzzle := h.gameSvc.GeneratePuzzle()
 	params := map[string]string{"count": strconv.Itoa(len(puzzle.Solution))}
 	introText := h.translator.Translate(user.LanguageCode, "new_puzzle", params)

@@ -109,6 +109,14 @@ func (s *Service) GeneratePuzzle() *Puzzle {
 	}
 }
 
+func (p *Puzzle) RevealAll() {
+	for _, pc := range p.Chars {
+		if pc.IsHidden {
+			pc.IsGuessed = true
+		}
+	}
+}
+
 func (p *Puzzle) RenderDisplay() string {
 	var displayBuilder strings.Builder
 	for _, pc := range p.Chars {

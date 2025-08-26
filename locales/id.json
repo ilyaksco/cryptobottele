@@ -9,6 +9,9 @@
     "user_score": "📊 Skor kamu saat ini adalah: <b>{score} poin</b>.",
     "profile_info": "👤 <b>Profil Pengguna</b>\n\n<b>Nama:</b> {name}\n<b>Skor:</b> {score} poin",
     "partial_correct": "👍 '{guessed_chars}' benar! Huruf tersebut sudah terisi. Lanjutkan!",
+    "puzzle_in_progress": "Puzzle lain sedang aktif di grup ini. Selesaikan dulu sebelum memulai yang baru!",
     "leaderboard_title": "🏆 <b>Papan Peringkat Global</b> 🏆\n\n",
-    "leaderboard_entry": "{rank}. {name} - <b>{score} poin</b>\n"
+    "surrender_message": "🏳️ Anda telah menyerah. Jawaban yang benar adalah: <b>{answer}</b>",
+    "leaderboard_entry": "{rank}. {name} - <b>{score} poin</b>\n",
+    "no_active_puzzle": "Tidak ada puzzle aktif yang bisa dihentikan."
   }

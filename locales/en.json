@@ -9,6 +9,9 @@
     "user_score": "📊 Your current score is: <b>{score} points</b>.",
     "partial_correct": "👍 '{guessed_chars}' is correct! I've filled it in for you. Keep going!",
     "profile_info": "👤 <b>User Profile</b>\n\n<b>Name:</b> {name}\n<b>Score:</b> {score} points",
+    "puzzle_in_progress": "There is already an active puzzle in this group. Please solve it first before starting a new one!",
     "leaderboard_title": "🏆 <b>Global Leaderboard</b> 🏆\n\n",
-    "leaderboard_entry": "{rank}. {name} - <b>{score} points</b>\n"
+    "surrender_message": "🏳️ You have surrendered. The correct answer was: <b>{answer}</b>",
+    "leaderboard_entry": "{rank}. {name} - <b>{score} points</b>\n",
+    "no_active_puzzle": "Tidak ada puzzle aktif yang bisa dihentikan."
   }
