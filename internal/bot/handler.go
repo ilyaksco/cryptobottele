@@ -34,12 +34,22 @@ func NewBotHandler(bot *tgbotapi.BotAPI, trans *i18n.Translator, cfg *config.Con
 }
 
 func (h *BotHandler) HandleUpdate(update tgbotapi.Update) {
+	var fromUser *tgbotapi.User
 	if update.Message != nil {
-		user, err := h.ensureUserExists(update.Message.From)
-		if err != nil {
-			log.Printf("Failed to ensure user exists: %v", err)
-			return
-		}
+		fromUser = update.Message.From
+	} else if update.CallbackQuery != nil {
+		fromUser = update.CallbackQuery.From
+	} else {
+		return
+	}
+
+	user, err := h.ensureUserExists(fromUser)
+	if err != nil {
+		log.Printf("Failed to ensure user exists: %v", err)
+		return
+	}
+
+	if update.Message != nil {
 		if update.Message.IsCommand() {
 			h.handleCommand(update.Message, user)
 			return
@@ -55,18 +65,12 @@ func (h *BotHandler) HandleUpdate(update tgbotapi.Update) {
 			return
 		}
 	} else if update.CallbackQuery != nil {
-
-		_, err := h.ensureUserExists(update.CallbackQuery.From)
-		if err != nil {
-			log.Printf("Failed to ensure user on callback: %v", err)
-			return
-		}
-		h.handleCallbackQuery(update.CallbackQuery)
+		h.handleCallbackQuery(update.CallbackQuery, user)
 	}
 }
 
 
-func (h *BotHandler) handleCallbackQuery(query *tgbotapi.CallbackQuery) {
+func (h *BotHandler) handleCallbackQuery(query *tgbotapi.CallbackQuery, user *storage.User) {
 	// --- LOG DITAMBAHKAN ---
 	
 	user, err := h.storage.GetUser(query.From.ID)
@@ -74,6 +78,7 @@ func (h *BotHandler) handleCallbackQuery(query *tgbotapi.CallbackQuery) {
 		return
 	}
 	// --- AKHIR LOG ---
+	var sendNewMessage bool
 
 	var text string
 	var markup tgbotapi.InlineKeyboardMarkup
@@ -81,6 +86,9 @@ func (h *BotHandler) handleCallbackQuery(query *tgbotapi.CallbackQuery) {
 	// --- LOG DITAMBAHKAN ---
 
 	switch query.Data {
+	case "play_again":
+		sendNewMessage = true
+		h.handleCryptoCommand(query.Message, user)
 	case "help_howtoplay":
 		text = h.translator.Translate(user.LanguageCode, "help_text_howtoplay", nil)
 		markup = h.buildHelpKeyboard(user.LanguageCode, "back_only")
@@ -96,13 +104,12 @@ func (h *BotHandler) handleCallbackQuery(query *tgbotapi.CallbackQuery) {
 		text = h.translator.Translate(user.LanguageCode, "help_intro", nil)
 		markup = h.buildHelpKeyboard(user.LanguageCode, "main")
 	}
-	
-	// --- LOG DITAMBAHKAN ---
-
-	msg := tgbotapi.NewEditMessageText(query.Message.Chat.ID, query.Message.MessageID, text)
-	msg.ParseMode = tgbotapi.ModeHTML
-	msg.ReplyMarkup = &markup
-	h.bot.Request(msg)
+	if !sendNewMessage {
+		msg := tgbotapi.NewEditMessageText(query.Message.Chat.ID, query.Message.MessageID, text)
+		msg.ParseMode = tgbotapi.ModeHTML
+		msg.ReplyMarkup = &markup
+		h.bot.Request(msg)
+	}
 	h.bot.Request(tgbotapi.NewCallback(query.ID, ""))
 }
 
@@ -134,7 +141,16 @@ func (h *BotHandler) handleGuess(message *tgbotapi.Message, user *storage.User, 
 			"total_score": strconv.FormatInt(newScore, 10),
 		}
 		responseText := h.translator.Translate(user.LanguageCode, "correct_answer", params)
-		h.sendMessage(message.Chat.ID, responseText, tgbotapi.ModeHTML)
+		
+		playAgainButton := tgbotapi.NewInlineKeyboardButtonData(
+			h.translator.Translate(user.LanguageCode, "play_again_button", nil),
+			"play_again",
+		)
+		markup := tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(playAgainButton))
+		msg := tgbotapi.NewMessage(message.Chat.ID, responseText)
+		msg.ParseMode = tgbotapi.ModeHTML
+		msg.ReplyMarkup = markup
+		h.bot.Send(msg)
 	} else {
 		params := map[string]string{"guessed_chars": result.CorrectlyGuessedChars}
 		responseText := h.translator.Translate(user.LanguageCode, "partial_correct", params)
@@ -221,7 +237,7 @@ func (h *BotHandler) handleSurrenderCommand(message *tgbotapi.Message, user *sto
 
 	puzzle.RevealAll()
 	// 2. Render puzzle yang sudah lengkap
-	finalText := "`" + puzzle.RenderDisplay() + "`"
+	finalText := "```\n" + puzzle.RenderDisplay() + "\n```"
 	// 3. EDIT pesan puzzle yang asli
 	h.editMessage(message.Chat.ID, puzzle.MessageID, finalText, tgbotapi.ModeMarkdownV2)
 
@@ -247,7 +263,7 @@ func (h *BotHandler) handleCryptoCommand(message *tgbotapi.Message, user *storag
 	introText := h.translator.Translate(user.LanguageCode, "new_puzzle", params)
 	h.sendMessage(message.Chat.ID, introText, "")
 
-	puzzleText := "`" + puzzle.RenderDisplay() + "`"
+	puzzleText := "```\n" + puzzle.RenderDisplay() + "\n```"
 	sentMsg, err := h.sendMessage(message.Chat.ID, puzzleText, tgbotapi.ModeMarkdownV2)
 	if err != nil {
 		log.Printf("Failed to send puzzle message: %v", err)

@@ -121,7 +121,7 @@ func (p *Puzzle) RenderDisplay() string {
 	var displayBuilder strings.Builder
 	for _, pc := range p.Chars {
 		if pc.Char == ' ' {
-			displayBuilder.WriteString("  ")
+			displayBuilder.WriteString("\n")
 			continue
 		}
 		if !unicode.IsLetter(pc.Char) {
