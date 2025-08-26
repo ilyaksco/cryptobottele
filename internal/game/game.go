@@ -13,17 +13,29 @@ var superscriptMap = map[rune]string{
 	'5': "⁵", '6': "⁶", '7': "⁷", '8': "⁸", '9': "⁹",
 }
 
+type PuzzleChar struct {
+	Char      rune
+	IsHidden  bool
+	IsGuessed bool
+	Value     int
+}
+
 type Puzzle struct {
-	Word         string
-	Display      string
-	Solution     string
-	HiddenCount  int
-	MessageID    int
+	Chars             []*PuzzleChar
+	Solution          string
+	RemainingSolution string
+	MessageID         int
 }
 
 type Service struct {
 	config *Config
 	random *rand.Rand
+}
+
+type CheckResult struct {
+	IsCorrect           bool
+	IsPartial           bool
+	CorrectlyGuessedChars string
 }
 
 func NewService(config *Config) *Service {
@@ -38,10 +50,10 @@ func (s *Service) GeneratePuzzle() *Puzzle {
 	word := s.config.Words[s.random.Intn(len(s.config.Words))]
 	word = strings.ToUpper(word)
 
-	var displayBuilder strings.Builder
+	var puzzleChars []*PuzzleChar
 	var solutionBuilder strings.Builder
-	
-	letterIndices := []int{}
+	var letterIndices []int
+
 	for i, char := range word {
 		if unicode.IsLetter(char) {
 			letterIndices = append(letterIndices, i)
@@ -52,7 +64,7 @@ func (s *Service) GeneratePuzzle() *Puzzle {
 		letterIndices[i], letterIndices[j] = letterIndices[j], letterIndices[i]
 	})
 
-	hideCount := (len(letterIndices) * 4) / 10 
+	hideCount := (len(letterIndices) * 4) / 10
 	if hideCount == 0 && len(letterIndices) > 1 {
 		hideCount = 1
 	}
@@ -62,37 +74,111 @@ func (s *Service) GeneratePuzzle() *Puzzle {
 		hideSet[letterIndices[i]] = true
 	}
 
-	for i, char := range word {
-		if !unicode.IsLetter(char) && char != ' ' {
-			continue
+	for _, char := range word {
+		pc := &PuzzleChar{Char: char}
+		if unicode.IsLetter(char) {
+			pc.Value = int(char-'A') + 1 + s.config.Shift
 		}
+		puzzleChars = append(puzzleChars, pc)
+	}
 
-		if char == ' ' {
-			displayBuilder.WriteString("  ")
-			continue
-		}
-
-		cryptoVal := int(char-'A') + 1 + s.config.Shift
-		superScript := toSuperscript(cryptoVal)
-
+	for i, pc := range puzzleChars {
 		if hideSet[i] {
-			displayBuilder.WriteString("(_" + superScript + ")")
-			solutionBuilder.WriteRune(char)
-		} else {
-			displayBuilder.WriteString("(" + string(char) + superScript + ")")
+			pc.IsHidden = true
+			solutionBuilder.WriteRune(pc.Char)
 		}
 	}
 
+	solution := solutionBuilder.String()
 	return &Puzzle{
-		Word:        word,
-		Display:     displayBuilder.String(),
-		Solution:    solutionBuilder.String(),
-		HiddenCount: hideCount,
+		Chars:             puzzleChars,
+		Solution:          solution,
+		RemainingSolution: solution,
 	}
 }
 
-func (s *Service) CheckAnswer(solution, guess string) bool {
-	return strings.ToUpper(guess) == solution
+func (p *Puzzle) RenderDisplay() string {
+	var displayBuilder strings.Builder
+	for _, pc := range p.Chars {
+		if pc.Char == ' ' {
+			displayBuilder.WriteString("  ")
+			continue
+		}
+		if !unicode.IsLetter(pc.Char) {
+			continue
+		}
+
+		superScript := toSuperscript(pc.Value)
+		if pc.IsHidden && !pc.IsGuessed {
+			displayBuilder.WriteString("(_" + superScript + ")")
+		} else {
+			displayBuilder.WriteString("(" + string(pc.Char) + superScript + ")")
+		}
+	}
+	return displayBuilder.String()
+}
+
+func (p *Puzzle) UpdateState(guessedChars string) {
+	guessedMap := make(map[rune]int)
+	for _, r := range guessedChars {
+		guessedMap[r]++
+	}
+
+	var newRemainingSolution strings.Builder
+	for _, r := range p.RemainingSolution {
+		if count, ok := guessedMap[r]; ok && count > 0 {
+			guessedMap[r]--
+		} else {
+			newRemainingSolution.WriteRune(r)
+		}
+	}
+	p.RemainingSolution = newRemainingSolution.String()
+
+	guessedMap = make(map[rune]int)
+	for _, r := range guessedChars {
+		guessedMap[r]++
+	}
+
+	for _, pc := range p.Chars {
+		if pc.IsHidden && !pc.IsGuessed {
+			if count, ok := guessedMap[pc.Char]; ok && count > 0 {
+				pc.IsGuessed = true
+				guessedMap[pc.Char]--
+			}
+		}
+	}
+}
+
+func (s *Service) CheckAnswer(remainingSolution, guess string) *CheckResult {
+	guess = strings.ToUpper(guess)
+	result := &CheckResult{}
+
+	if guess == remainingSolution {
+		result.IsCorrect = true
+		result.CorrectlyGuessedChars = guess // Penambahan penting di sini
+		return result
+	}
+
+	var guessedCharsBuilder strings.Builder
+	solutionMap := make(map[rune]int)
+	for _, r := range remainingSolution {
+		solutionMap[r]++
+	}
+
+	for _, r := range guess {
+		if count, ok := solutionMap[r]; ok && count > 0 {
+			guessedCharsBuilder.WriteRune(r)
+			solutionMap[r]--
+		}
+	}
+
+	guessedStr := guessedCharsBuilder.String()
+	if len(guessedStr) > 0 {
+		result.IsPartial = true
+		result.CorrectlyGuessedChars = guessedStr
+	}
+
+	return result
 }
 
 func toSuperscript(n int) string {

@@ -7,6 +7,7 @@
     "correct_answer": "🎉 Correct! You earned <b>{points}</b> points. Your total score is now <b>{total_score}</b>.",
     "wrong_answer": "❌ Not quite. Try again!",
     "user_score": "📊 Your current score is: <b>{score} points</b>.",
+    "partial_correct": "👍 '{guessed_chars}' is correct! I've filled it in for you. Keep going!",
     "profile_info": "👤 <b>User Profile</b>\n\n<b>Name:</b> {name}\n<b>Score:</b> {score} points",
     "leaderboard_title": "🏆 <b>Global Leaderboard</b> 🏆\n\n",
     "leaderboard_entry": "{rank}. {name} - <b>{score} points</b>\n"

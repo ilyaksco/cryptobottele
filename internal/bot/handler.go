@@ -46,12 +46,56 @@ func (h *BotHandler) HandleUpdate(update tgbotapi.Update) {
 		h.handleCommand(update.Message, user)
 		return
 	}
-	if update.Message.ReplyToMessage != nil {
-		h.handleReply(update.Message, user)
+	isPrivate := update.Message.Chat.IsPrivate()
+	puzzle, isActive := h.activePuzzles[update.Message.Chat.ID]
+	if isPrivate && isActive {
+		h.handleGuess(update.Message, user, puzzle)
+		return
+	}
+	if !isPrivate && isActive && update.Message.ReplyToMessage != nil && puzzle.MessageID == update.Message.ReplyToMessage.MessageID {
+		h.handleGuess(update.Message, user, puzzle)
 		return
 	}
 }
 
+func (h *BotHandler) handleGuess(message *tgbotapi.Message, user *storage.User, puzzle *game.Puzzle) {
+	result := h.gameSvc.CheckAnswer(puzzle.RemainingSolution, message.Text)
+
+	if !result.IsCorrect && !result.IsPartial {
+		responseText := h.translator.Translate(user.LanguageCode, "wrong_answer", nil)
+		h.sendMessage(message.Chat.ID, responseText, "")
+		return
+	}
+
+	// Jika ada tebakan yang benar (sebagian atau seluruhnya), selalu update puzzle & edit pesan
+	puzzle.UpdateState(result.CorrectlyGuessedChars)
+	newPuzzleText := "`" + puzzle.RenderDisplay() + "`"
+	h.editMessage(message.Chat.ID, puzzle.MessageID, newPuzzleText, tgbotapi.ModeMarkdownV2)
+
+	// Sekarang, periksa apakah game sudah selesai
+	if result.IsCorrect {
+		delete(h.activePuzzles, message.Chat.ID)
+		points := 10
+		newScore, err := h.storage.IncreaseUserScore(user.ID, points)
+		if err != nil {
+			log.Printf("Failed to increase score for user %d: %v", user.ID, err)
+			return
+		}
+		params := map[string]string{
+			"points":      strconv.Itoa(points),
+			"total_score": strconv.FormatInt(newScore, 10),
+		}
+		responseText := h.translator.Translate(user.LanguageCode, "correct_answer", params)
+		h.sendMessage(message.Chat.ID, responseText, tgbotapi.ModeHTML)
+	} else {
+		// Jika hanya benar sebagian, kirim pesan feedback
+		params := map[string]string{"guessed_chars": result.CorrectlyGuessedChars}
+		responseText := h.translator.Translate(user.LanguageCode, "partial_correct", params)
+		h.sendMessage(message.Chat.ID, responseText, "")
+	}
+}
+
+// ... Sisa file (ensureUserExists, handleCommand, dll) tetap sama
 func (h *BotHandler) ensureUserExists(message *tgbotapi.Message) (*storage.User, error) {
 	user, err := h.storage.GetUser(message.From.ID)
 	if err != nil {
@@ -68,7 +112,6 @@ func (h *BotHandler) ensureUserExists(message *tgbotapi.Message) (*storage.User,
 	}
 	return user, nil
 }
-
 func (h *BotHandler) handleCommand(message *tgbotapi.Message, user *storage.User) {
 	switch message.Command() {
 	case "start":
@@ -85,39 +128,36 @@ func (h *BotHandler) handleCommand(message *tgbotapi.Message, user *storage.User
 		h.handleLeaderboardCommand(message, user)
 	}
 }
+func (h *BotHandler) handleCryptoCommand(message *tgbotapi.Message, user *storage.User) {
+	puzzle := h.gameSvc.GeneratePuzzle()
+	params := map[string]string{"count": strconv.Itoa(len(puzzle.Solution))}
+	introText := h.translator.Translate(user.LanguageCode, "new_puzzle", params)
+	h.sendMessage(message.Chat.ID, introText, "")
 
-func (h *BotHandler) handleReply(message *tgbotapi.Message, user *storage.User) {
-	puzzle, isActive := h.activePuzzles[message.Chat.ID]
-	if !isActive || puzzle.MessageID != message.ReplyToMessage.MessageID {
+	puzzleText := "`" + puzzle.RenderDisplay() + "`"
+	sentMsg, err := h.sendMessage(message.Chat.ID, puzzleText, tgbotapi.ModeMarkdownV2)
+	if err != nil {
+		log.Printf("Failed to send puzzle message: %v", err)
 		return
 	}
-	isCorrect := h.gameSvc.CheckAnswer(puzzle.Solution, message.Text)
-	if isCorrect {
-		delete(h.activePuzzles, message.Chat.ID)
-		points := 10
-		newScore, err := h.storage.IncreaseUserScore(user.ID, points)
-		if err != nil {
-			log.Printf("Failed to increase score for user %d: %v", user.ID, err)
-			return
-		}
-		params := map[string]string{
-			"points":      strconv.Itoa(points),
-			"total_score": strconv.FormatInt(newScore, 10),
-		}
-		responseText := h.translator.Translate(user.LanguageCode, "correct_answer", params)
-		h.sendMessage(message.Chat.ID, responseText, tgbotapi.ModeHTML)
-	} else {
-		responseText := h.translator.Translate(user.LanguageCode, "wrong_answer", nil)
-		h.sendMessage(message.Chat.ID, responseText, "")
+	puzzle.MessageID = sentMsg.MessageID
+	h.activePuzzles[message.Chat.ID] = puzzle
+}
+func (h *BotHandler) editMessage(chatID int64, messageID int, text string, parseMode string) {
+	msg := tgbotapi.NewEditMessageText(chatID, messageID, text)
+	if parseMode != "" {
+		msg.ParseMode = parseMode
+	}
+	_, err := h.bot.Send(msg)
+	if err != nil {
+		log.Printf("Failed to edit message: %v", err)
 	}
 }
-
 func (h *BotHandler) handleStartCommand(message *tgbotapi.Message, user *storage.User) {
 	params := map[string]string{"name": message.From.FirstName}
 	responseText := h.translator.Translate(user.LanguageCode, "welcome", params)
 	h.sendMessage(message.Chat.ID, responseText, "")
 }
-
 func (h *BotHandler) handleLangCommand(message *tgbotapi.Message, user *storage.User) {
 	args := message.CommandArguments()
 	langCode := strings.ToLower(strings.TrimSpace(args))
@@ -136,28 +176,11 @@ func (h *BotHandler) handleLangCommand(message *tgbotapi.Message, user *storage.
 	responseText := h.translator.Translate(langCode, "lang_changed", nil)
 	h.sendMessage(message.Chat.ID, responseText, "")
 }
-
-func (h *BotHandler) handleCryptoCommand(message *tgbotapi.Message, user *storage.User) {
-	puzzle := h.gameSvc.GeneratePuzzle()
-	params := map[string]string{"count": strconv.Itoa(puzzle.HiddenCount)}
-	introText := h.translator.Translate(user.LanguageCode, "new_puzzle", params)
-	h.sendMessage(message.Chat.ID, introText, "")
-	puzzleText := "`" + puzzle.Display + "`"
-	sentMsg, err := h.sendMessage(message.Chat.ID, puzzleText, tgbotapi.ModeMarkdownV2)
-	if err != nil {
-		log.Printf("Failed to send puzzle message: %v", err)
-		return
-	}
-	puzzle.MessageID = sentMsg.MessageID
-	h.activePuzzles[message.Chat.ID] = puzzle
-}
-
 func (h *BotHandler) handleScoreCommand(message *tgbotapi.Message, user *storage.User) {
 	params := map[string]string{"score": strconv.FormatInt(user.Score, 10)}
 	responseText := h.translator.Translate(user.LanguageCode, "user_score", params)
 	h.sendMessage(message.Chat.ID, responseText, tgbotapi.ModeHTML)
 }
-
 func (h *BotHandler) handleProfileCommand(message *tgbotapi.Message, user *storage.User) {
 	params := map[string]string{
 		"name":  user.FirstName,
@@ -166,18 +189,15 @@ func (h *BotHandler) handleProfileCommand(message *tgbotapi.Message, user *stora
 	responseText := h.translator.Translate(user.LanguageCode, "profile_info", params)
 	h.sendMessage(message.Chat.ID, responseText, tgbotapi.ModeHTML)
 }
-
 func (h *BotHandler) handleLeaderboardCommand(message *tgbotapi.Message, user *storage.User) {
 	topUsers, err := h.storage.GetTopUsers(10)
 	if err != nil {
 		log.Printf("Failed to get top users for leaderboard: %v", err)
 		return
 	}
-
 	var leaderboardBuilder strings.Builder
 	title := h.translator.Translate(user.LanguageCode, "leaderboard_title", nil)
 	leaderboardBuilder.WriteString(title)
-
 	for i, player := range topUsers {
 		params := map[string]string{
 			"rank":  strconv.Itoa(i + 1),
@@ -187,10 +207,8 @@ func (h *BotHandler) handleLeaderboardCommand(message *tgbotapi.Message, user *s
 		entry := h.translator.Translate(user.LanguageCode, "leaderboard_entry", params)
 		leaderboardBuilder.WriteString(entry)
 	}
-
 	h.sendMessage(message.Chat.ID, leaderboardBuilder.String(), tgbotapi.ModeHTML)
 }
-
 func (h *BotHandler) sendMessage(chatID int64, text string, parseMode string) (tgbotapi.Message, error) {
 	msg := tgbotapi.NewMessage(chatID, text)
 	if parseMode != "" {
