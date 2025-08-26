@@ -34,29 +34,78 @@ func NewBotHandler(bot *tgbotapi.BotAPI, trans *i18n.Translator, cfg *config.Con
 }
 
 func (h *BotHandler) HandleUpdate(update tgbotapi.Update) {
-	if update.Message == nil {
-		return
-	}
-	user, err := h.ensureUserExists(update.Message)
-	if err != nil {
-		log.Printf("Failed to ensure user exists: %v", err)
-		return
-	}
-	if update.Message.IsCommand() {
-		h.handleCommand(update.Message, user)
-		return
-	}
-	isPrivate := update.Message.Chat.IsPrivate()
-	puzzle, isActive := h.activePuzzles[update.Message.Chat.ID]
-	if isPrivate && isActive {
-		h.handleGuess(update.Message, user, puzzle)
-		return
-	}
-	if !isPrivate && isActive && update.Message.ReplyToMessage != nil && puzzle.MessageID == update.Message.ReplyToMessage.MessageID {
-		h.handleGuess(update.Message, user, puzzle)
-		return
+	if update.Message != nil {
+		user, err := h.ensureUserExists(update.Message.From)
+		if err != nil {
+			log.Printf("Failed to ensure user exists: %v", err)
+			return
+		}
+		if update.Message.IsCommand() {
+			h.handleCommand(update.Message, user)
+			return
+		}
+		isPrivate := update.Message.Chat.IsPrivate()
+		puzzle, isActive := h.activePuzzles[update.Message.Chat.ID]
+		if isPrivate && isActive {
+			h.handleGuess(update.Message, user, puzzle)
+			return
+		}
+		if !isPrivate && isActive && update.Message.ReplyToMessage != nil && puzzle.MessageID == update.Message.ReplyToMessage.MessageID {
+			h.handleGuess(update.Message, user, puzzle)
+			return
+		}
+	} else if update.CallbackQuery != nil {
+
+		_, err := h.ensureUserExists(update.CallbackQuery.From)
+		if err != nil {
+			log.Printf("Failed to ensure user on callback: %v", err)
+			return
+		}
+		h.handleCallbackQuery(update.CallbackQuery)
 	}
 }
+
+
+func (h *BotHandler) handleCallbackQuery(query *tgbotapi.CallbackQuery) {
+	// --- LOG DITAMBAHKAN ---
+	
+	user, err := h.storage.GetUser(query.From.ID)
+	if err != nil {
+		return
+	}
+	// --- AKHIR LOG ---
+
+	var text string
+	var markup tgbotapi.InlineKeyboardMarkup
+
+	// --- LOG DITAMBAHKAN ---
+
+	switch query.Data {
+	case "help_howtoplay":
+		text = h.translator.Translate(user.LanguageCode, "help_text_howtoplay", nil)
+		markup = h.buildHelpKeyboard(user.LanguageCode, "back_only")
+	case "help_whatiscrypto":
+		text = h.translator.Translate(user.LanguageCode, "help_text_whatiscrypto", nil)
+		markup = h.buildHelpKeyboard(user.LanguageCode, "back_only")
+	case "help_commands":
+		text = h.translator.Translate(user.LanguageCode, "help_text_commands", nil)
+		markup = h.buildHelpKeyboard(user.LanguageCode, "back_only")
+	case "help_main":
+		fallthrough
+	default:
+		text = h.translator.Translate(user.LanguageCode, "help_intro", nil)
+		markup = h.buildHelpKeyboard(user.LanguageCode, "main")
+	}
+	
+	// --- LOG DITAMBAHKAN ---
+
+	msg := tgbotapi.NewEditMessageText(query.Message.Chat.ID, query.Message.MessageID, text)
+	msg.ParseMode = tgbotapi.ModeHTML
+	msg.ReplyMarkup = &markup
+	h.bot.Request(msg)
+	h.bot.Request(tgbotapi.NewCallback(query.ID, ""))
+}
+
 
 func (h *BotHandler) handleGuess(message *tgbotapi.Message, user *storage.User, puzzle *game.Puzzle) {
 	result := h.gameSvc.CheckAnswer(puzzle.RemainingSolution, message.Text)
@@ -95,26 +144,29 @@ func (h *BotHandler) handleGuess(message *tgbotapi.Message, user *storage.User, 
 
 
 // ... Sisa file (ensureUserExists, handleCommand, dll) tetap sama
-func (h *BotHandler) ensureUserExists(message *tgbotapi.Message) (*storage.User, error) {
-	user, err := h.storage.GetUser(message.From.ID)
+func (h *BotHandler) ensureUserExists(tgUser *tgbotapi.User) (*storage.User, error) {
+	user, err := h.storage.GetUser(tgUser.ID)
 	if err != nil {
 		user = &storage.User{
-			ID:           message.From.ID,
+			ID:           tgUser.ID,
 			LanguageCode: h.config.DefaultLanguage,
 		}
 	}
-	user.FirstName = message.From.FirstName
-	user.LastName = message.From.LastName
-	user.Username = message.From.UserName
+	user.FirstName = tgUser.FirstName
+	user.LastName = tgUser.LastName
+	user.Username = tgUser.UserName
 	if err := h.storage.UpsertUser(*user); err != nil {
 		return nil, err
 	}
 	return user, nil
 }
+
 func (h *BotHandler) handleCommand(message *tgbotapi.Message, user *storage.User) {
 	switch message.Command() {
 	case "start":
 		h.handleStartCommand(message, user)
+	case "help":
+		h.handleHelpCommand(message, user)
 	case "lang":
 		h.handleLangCommand(message, user)
 	case "crypto":
@@ -128,6 +180,35 @@ func (h *BotHandler) handleCommand(message *tgbotapi.Message, user *storage.User
 	case "surrender", "menyerah":
 		h.handleSurrenderCommand(message, user)
 	}
+}
+
+func (h *BotHandler) handleHelpCommand(message *tgbotapi.Message, user *storage.User) {
+	text := h.translator.Translate(user.LanguageCode, "help_intro", nil)
+	markup := h.buildHelpKeyboard(user.LanguageCode, "main")
+	msg := tgbotapi.NewMessage(message.Chat.ID, text)
+	msg.ReplyMarkup = markup
+	h.bot.Send(msg)
+}
+
+func (h *BotHandler) buildHelpKeyboard(langCode string, menuType string) tgbotapi.InlineKeyboardMarkup {
+	if menuType == "back_only" {
+		return tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData(h.translator.Translate(langCode, "help_button_back", nil), "help_main"),
+			),
+		)
+	}
+	return tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(h.translator.Translate(langCode, "help_button_howtoplay", nil), "help_howtoplay"),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(h.translator.Translate(langCode, "help_button_whatiscrypto", nil), "help_whatiscrypto"),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(h.translator.Translate(langCode, "help_button_commands", nil), "help_commands"),
+		),
+	)
 }
 
 func (h *BotHandler) handleSurrenderCommand(message *tgbotapi.Message, user *storage.User) {
@@ -180,15 +261,12 @@ func (h *BotHandler) editMessage(chatID int64, messageID int, text string, parse
 	if parseMode != "" {
 		msg.ParseMode = parseMode
 	}
-	_, err := h.bot.Send(msg)
-	if err != nil {
-		log.Printf("Failed to edit message: %v", err)
-	}
+	h.bot.Request(msg)
 }
 func (h *BotHandler) handleStartCommand(message *tgbotapi.Message, user *storage.User) {
 	params := map[string]string{"name": message.From.FirstName}
 	responseText := h.translator.Translate(user.LanguageCode, "welcome", params)
-	h.sendMessage(message.Chat.ID, responseText, "")
+	h.sendMessage(message.Chat.ID, responseText, tgbotapi.ModeHTML)
 }
 func (h *BotHandler) handleLangCommand(message *tgbotapi.Message, user *storage.User) {
 	args := message.CommandArguments()
