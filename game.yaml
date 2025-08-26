@@ -3,11 +3,59 @@ puzzles:
   - text: "AKU MAKAN"
     shift: 4  # Puzzle ini akan selalu menggunakan shift 4
 
-  - text: "GOLANG"
-    shift: 0  # Puzzle ini akan selalu menggunakan shift 0 (A=1, B=2)
+  - text: "BURUNG MERPATI"
+    shift: 2
 
-  - text: "RANDOM SHIFT"
+  - text: "HUJAN DERAS"
     shift: "random" # Bot akan memilih shift acak (1-10) untuk puzzle ini
 
-  - text: "SUPABASE"
-    # Jika shift tidak ditentukan, akan otomatis menggunakan shift 0
+  - text: "PESTA RAKYAT"
+    shift: 7
+
+  - text: "PANTAI INDAH"
+    # shift tidak ditentukan → otomatis 0
+
+  - text: "KUE LAPIS"
+    shift: 5
+
+  - text: "JALAN SETAPAK"
+    shift: "random"
+
+  - text: "BOLA BASKET"
+    shift: 1
+
+  - text: "MALAM MINGGU"
+    shift: 3
+
+  - text: "KOPI SUSU"
+    shift: "random"
+
+  - text: "ANAK KECIL"
+    shift: 9
+
+  - text: "RUMAH POHON"
+    # otomatis shift 0
+
+  - text: "GUNUNG TINGGI"
+    shift: "random"
+
+  - text: "KUCING IMUT"
+    shift: 6
+
+  - text: "SEPEDA TUA"
+    shift: "random"
+
+  - text: "BUNGA MAWAR"
+    shift: 8
+
+  - text: "PAGI CERAH"
+    shift: "random"
+
+  - text: "NAGA MERAH"
+    shift: 10
+
+  - text: "HUTAN RIMBA"
+    # otomatis shift 0
+
+  - text: "PESAWAT KERTAS"
+    shift: "random"

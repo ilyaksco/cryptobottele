@@ -67,13 +67,12 @@ func (h *BotHandler) handleGuess(message *tgbotapi.Message, user *storage.User, 
 		return
 	}
 
-	// Jika ada tebakan yang benar (sebagian atau seluruhnya), selalu update puzzle & edit pesan
 	puzzle.UpdateState(result.CorrectlyGuessedChars)
 	newPuzzleText := "`" + puzzle.RenderDisplay() + "`"
 	h.editMessage(message.Chat.ID, puzzle.MessageID, newPuzzleText, tgbotapi.ModeMarkdownV2)
 
-	// Sekarang, periksa apakah game sudah selesai
-	if result.IsCorrect {
+	// Periksa status puzzle SETELAH diupdate
+	if puzzle.RemainingSolution == "" {
 		delete(h.activePuzzles, message.Chat.ID)
 		points := 10
 		newScore, err := h.storage.IncreaseUserScore(user.ID, points)
@@ -88,12 +87,12 @@ func (h *BotHandler) handleGuess(message *tgbotapi.Message, user *storage.User, 
 		responseText := h.translator.Translate(user.LanguageCode, "correct_answer", params)
 		h.sendMessage(message.Chat.ID, responseText, tgbotapi.ModeHTML)
 	} else {
-		// Jika hanya benar sebagian, kirim pesan feedback
 		params := map[string]string{"guessed_chars": result.CorrectlyGuessedChars}
 		responseText := h.translator.Translate(user.LanguageCode, "partial_correct", params)
 		h.sendMessage(message.Chat.ID, responseText, "")
 	}
 }
+
 
 // ... Sisa file (ensureUserExists, handleCommand, dll) tetap sama
 func (h *BotHandler) ensureUserExists(message *tgbotapi.Message) (*storage.User, error) {

@@ -165,6 +165,13 @@ func (s *Service) CheckAnswer(remainingSolution, guess string) *CheckResult {
 	guess = strings.ToUpper(guess)
 	result := &CheckResult{}
 
+	tempSolution := remainingSolution
+	for _, char := range guess {
+		if !strings.ContainsRune(tempSolution, char) {
+			return result // Kembalikan hasil kosong (salah total)
+		}
+	}
+
 	if guess == remainingSolution {
 		result.IsCorrect = true
 		result.CorrectlyGuessedChars = guess // Penambahan penting di sini
