@@ -7,9 +7,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type PuzzleConfig struct {
+	Text  string      `yaml:"text"`
+	Shift interface{} `yaml:"shift"`
+}
+
 type Config struct {
-	Shift int      `yaml:"shift"`
-	Words []string `yaml:"words"`
+	Puzzles []PuzzleConfig `yaml:"puzzles"`
 }
 
 func LoadConfig(filePath string) (*Config, error) {
@@ -24,8 +28,8 @@ func LoadConfig(filePath string) (*Config, error) {
 		return nil, fmt.Errorf("could not parse game config file: %w", err)
 	}
 
-	if len(config.Words) == 0 {
-		return nil, fmt.Errorf("no words found in game config")
+	if len(config.Puzzles) == 0 {
+		return nil, fmt.Errorf("no puzzles found in game config")
 	}
 
 	return &config, nil

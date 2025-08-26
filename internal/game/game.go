@@ -47,8 +47,20 @@ func NewService(config *Config) *Service {
 }
 
 func (s *Service) GeneratePuzzle() *Puzzle {
-	word := s.config.Words[s.random.Intn(len(s.config.Words))]
-	word = strings.ToUpper(word)
+	puzzleConfig := s.config.Puzzles[s.random.Intn(len(s.config.Puzzles))]
+	word := strings.ToUpper(puzzleConfig.Text)
+	
+	var finalShift int
+	switch v := puzzleConfig.Shift.(type) {
+	case int:
+		finalShift = v
+	case string:
+		if v == "random" {
+			finalShift = s.random.Intn(10) + 1 // Shift acak dari 1 sampai 10
+		}
+	default:
+		finalShift = 0 // Default jika tidak ada atau format salah
+	}
 
 	var puzzleChars []*PuzzleChar
 	var solutionBuilder strings.Builder
@@ -77,7 +89,7 @@ func (s *Service) GeneratePuzzle() *Puzzle {
 	for _, char := range word {
 		pc := &PuzzleChar{Char: char}
 		if unicode.IsLetter(char) {
-			pc.Value = int(char-'A') + 1 + s.config.Shift
+			pc.Value = int(char-'A') + 1 + finalShift
 		}
 		puzzleChars = append(puzzleChars, pc)
 	}
