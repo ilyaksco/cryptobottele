@@ -1,0 +1,13 @@
+# Nilai pergeseran untuk kriptografi. 
+# 0 berarti A=1, B=2, dst.
+# 1 berarti A=2, B=3, dst.
+shift: 0
+
+# Daftar kata atau frasa yang akan dijadikan puzzle.
+words:
+  - "AKU MAKAN"
+  - "SUPABASE"
+  - "GOLANG"
+  - "TELEGRAM BOT"
+  - "BLOCKCHAIN"
+  - "BITCOIN ETHEREUM"

@@ -1,0 +1,13 @@
+{
+    "welcome": "Hello, {name}! Welcome to Crypto Word Game. Type /crypto to start a new game.",
+    "lang_usage": "Usage: /lang [en|id]",
+    "lang_changed": "Language has been changed to English.",
+    "lang_change_failed": "Failed to change language. Please try again later.",
+    "new_puzzle": "Here is your new puzzle! Guess the {count} missing letter(s) by replying to this message:",
+    "correct_answer": "🎉 Correct! You earned <b>{points}</b> points. Your total score is now <b>{total_score}</b>.",
+    "wrong_answer": "❌ Not quite. Try again!",
+    "user_score": "📊 Your current score is: <b>{score} points</b>.",
+    "profile_info": "👤 <b>User Profile</b>\n\n<b>Name:</b> {name}\n<b>Score:</b> {score} points",
+    "leaderboard_title": "🏆 <b>Global Leaderboard</b> 🏆\n\n",
+    "leaderboard_entry": "{rank}. {name} - <b>{score} points</b>\n"
+  }

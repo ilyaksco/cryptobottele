@@ -1,0 +1,13 @@
+{
+    "welcome": "Halo, {name}! Selamat datang di Crypto Word Game. Ketik /crypto untuk memulai game baru.",
+    "lang_usage": "Gunakan: /lang [en|id]",
+    "lang_changed": "Bahasa telah berhasil diubah ke Bahasa Indonesia.",
+    "lang_change_failed": "Gagal mengubah bahasa. Silakan coba lagi nanti.",
+    "new_puzzle": "Ini puzzle barumu! Tebak {count} huruf yang hilang dengan membalas pesan ini:",
+    "correct_answer": "🎉 Benar! Kamu mendapatkan <b>{points}</b> poin. Total skormu sekarang <b>{total_score}</b>.",
+    "wrong_answer": "❌ Kurang tepat. Coba lagi!",
+    "user_score": "📊 Skor kamu saat ini adalah: <b>{score} poin</b>.",
+    "profile_info": "👤 <b>Profil Pengguna</b>\n\n<b>Nama:</b> {name}\n<b>Skor:</b> {score} poin",
+    "leaderboard_title": "🏆 <b>Papan Peringkat Global</b> 🏆\n\n",
+    "leaderboard_entry": "{rank}. {name} - <b>{score} poin</b>\n"
+  }
