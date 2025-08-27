@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+
 	"cryptowordgamebot/internal/config"
 	"cryptowordgamebot/internal/game"
 	"cryptowordgamebot/internal/i18n"
@@ -20,6 +21,7 @@ type BotHandler struct {
 	storage       *storage.Storage
 	gameSvc       *game.Service
 	activePuzzles map[int64]*game.Puzzle
+	
 }
 
 func NewBotHandler(bot *tgbotapi.BotAPI, trans *i18n.Translator, cfg *config.Config, store *storage.Storage, gameSvc *game.Service) *BotHandler {
@@ -30,6 +32,7 @@ func NewBotHandler(bot *tgbotapi.BotAPI, trans *i18n.Translator, cfg *config.Con
 		storage:       store,
 		gameSvc:       gameSvc,
 		activePuzzles: make(map[int64]*game.Puzzle),
+		
 	}
 }
 
@@ -48,6 +51,8 @@ func (h *BotHandler) HandleUpdate(update tgbotapi.Update) {
 		log.Printf("Failed to ensure user exists: %v", err)
 		return
 	}
+	
+
 
 	if update.Message != nil {
 		if update.Message.IsCommand() {
@@ -127,10 +132,9 @@ func (h *BotHandler) handleGuess(message *tgbotapi.Message, user *storage.User, 
 	newPuzzleText := "`" + puzzle.RenderDisplay() + "`"
 	h.editMessage(message.Chat.ID, puzzle.MessageID, newPuzzleText, tgbotapi.ModeMarkdownV2)
 
-	// Periksa status puzzle SETELAH diupdate
 	if puzzle.RemainingSolution == "" {
 		delete(h.activePuzzles, message.Chat.ID)
-		points := 10
+		points := puzzle.Points
 		newScore, err := h.storage.IncreaseUserScore(user.ID, points)
 		if err != nil {
 			log.Printf("Failed to increase score for user %d: %v", user.ID, err)
@@ -141,7 +145,7 @@ func (h *BotHandler) handleGuess(message *tgbotapi.Message, user *storage.User, 
 			"total_score": strconv.FormatInt(newScore, 10),
 		}
 		responseText := h.translator.Translate(user.LanguageCode, "correct_answer", params)
-		
+
 		playAgainButton := tgbotapi.NewInlineKeyboardButtonData(
 			h.translator.Translate(user.LanguageCode, "play_again_button", nil),
 			"play_again",
@@ -254,7 +258,21 @@ func (h *BotHandler) handleCryptoCommand(message *tgbotapi.Message, user *storag
 			return
 		}
 	}
-	puzzle := h.gameSvc.GeneratePuzzle()
+
+	args := strings.ToLower(strings.TrimSpace(message.CommandArguments()))
+	difficulty := "easy"
+	validDifficulties := map[string]bool{"easy": true, "medium": true, "hard": true, "veryhard": true}
+
+	if _, isValid := validDifficulties[args]; isValid && args != "" {
+		difficulty = args
+	}
+
+	puzzle, err := h.gameSvc.GeneratePuzzle(difficulty)
+	if err != nil {
+		log.Printf("Failed to generate puzzle: %v", err)
+		return
+	}
+
 	params := map[string]string{"count": strconv.Itoa(len(puzzle.Solution))}
 	introText := h.translator.Translate(user.LanguageCode, "new_puzzle", params)
 	h.sendMessage(message.Chat.ID, introText, "")

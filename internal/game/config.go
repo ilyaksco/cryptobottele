@@ -12,8 +12,14 @@ type PuzzleConfig struct {
 	Shift interface{} `yaml:"shift"`
 }
 
+type DifficultyLevel struct {
+	Points         int            `yaml:"points"`
+	HidePercentage int            `yaml:"hide_percentage"`
+	Puzzles        []PuzzleConfig `yaml:"puzzles"`
+}
+
 type Config struct {
-	Puzzles []PuzzleConfig `yaml:"puzzles"`
+	Difficulties map[string]DifficultyLevel `yaml:"difficulties"`
 }
 
 func LoadConfig(filePath string) (*Config, error) {
@@ -28,8 +34,8 @@ func LoadConfig(filePath string) (*Config, error) {
 		return nil, fmt.Errorf("could not parse game config file: %w", err)
 	}
 
-	if len(config.Puzzles) == 0 {
-		return nil, fmt.Errorf("no puzzles found in game config")
+	if len(config.Difficulties) == 0 {
+		return nil, fmt.Errorf("no difficulties found in game config")
 	}
 
 	return &config, nil

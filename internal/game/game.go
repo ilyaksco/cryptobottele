@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"fmt"
 )
 
 var superscriptMap = map[rune]string{
@@ -25,6 +26,7 @@ type Puzzle struct {
 	Solution          string
 	RemainingSolution string
 	MessageID         int
+	Points            int
 }
 
 type Service struct {
@@ -46,20 +48,32 @@ func NewService(config *Config) *Service {
 	}
 }
 
-func (s *Service) GeneratePuzzle() *Puzzle {
-	puzzleConfig := s.config.Puzzles[s.random.Intn(len(s.config.Puzzles))]
+func (s *Service) GeneratePuzzle(difficulty string) (*Puzzle, error) {
+	level, ok := s.config.Difficulties[difficulty]
+	if !ok {
+		level, ok = s.config.Difficulties["easy"]
+		if !ok {
+			return nil, fmt.Errorf("easy difficulty level not found in config")
+		}
+	}
+
+	if len(level.Puzzles) == 0 {
+		return nil, fmt.Errorf("no puzzles found for difficulty: %s", difficulty)
+	}
+
+	puzzleConfig := level.Puzzles[s.random.Intn(len(level.Puzzles))]
 	word := strings.ToUpper(puzzleConfig.Text)
-	
+
 	var finalShift int
 	switch v := puzzleConfig.Shift.(type) {
 	case int:
 		finalShift = v
 	case string:
 		if v == "random" {
-			finalShift = s.random.Intn(10) + 1 // Shift acak dari 1 sampai 10
+			finalShift = s.random.Intn(10) + 1
 		}
 	default:
-		finalShift = 0 // Default jika tidak ada atau format salah
+		finalShift = 0
 	}
 
 	var puzzleChars []*PuzzleChar
@@ -76,7 +90,7 @@ func (s *Service) GeneratePuzzle() *Puzzle {
 		letterIndices[i], letterIndices[j] = letterIndices[j], letterIndices[i]
 	})
 
-	hideCount := (len(letterIndices) * 4) / 10
+	hideCount := (len(letterIndices) * level.HidePercentage) / 100
 	if hideCount == 0 && len(letterIndices) > 1 {
 		hideCount = 1
 	}
@@ -106,7 +120,8 @@ func (s *Service) GeneratePuzzle() *Puzzle {
 		Chars:             puzzleChars,
 		Solution:          solution,
 		RemainingSolution: solution,
-	}
+		Points:            level.Points,
+	}, nil
 }
 
 func (p *Puzzle) RevealAll() {

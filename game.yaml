@@ -1,61 +1,60 @@
-# Daftar puzzle, setiap puzzle bisa memiliki shift sendiri
-puzzles:
-  - text: "AKU MAKAN"
-    shift: 4  # Puzzle ini akan selalu menggunakan shift 4
-
-  - text: "BURUNG MERPATI"
-    shift: 2
-
-  - text: "HUJAN DERAS"
-    shift: "random" # Bot akan memilih shift acak (1-10) untuk puzzle ini
-
-  - text: "PESTA RAKYAT"
-    shift: 7
-
-  - text: "PANTAI INDAH"
-    # shift tidak ditentukan → otomatis 0
-
-  - text: "KUE LAPIS"
-    shift: 5
-
-  - text: "JALAN SETAPAK"
-    shift: "random"
-
-  - text: "BOLA BASKET"
-    shift: 1
-
-  - text: "MALAM MINGGU"
-    shift: 3
-
-  - text: "KOPI SUSU"
-    shift: "random"
-
-  - text: "ANAK KECIL"
-    shift: 9
-
-  - text: "RUMAH POHON"
-    # otomatis shift 0
-
-  - text: "GUNUNG TINGGI"
-    shift: "random"
-
-  - text: "KUCING IMUT"
-    shift: 6
-
-  - text: "SEPEDA TUA"
-    shift: "random"
-
-  - text: "BUNGA MAWAR"
-    shift: 8
-
-  - text: "PAGI CERAH"
-    shift: "random"
-
-  - text: "NAGA MERAH"
-    shift: 10
-
-  - text: "HUTAN RIMBA"
-    # otomatis shift 0
-
-  - text: "PESAWAT KERTAS"
-    shift: "random"
+difficulties:
+  easy:
+    points: 10
+    hide_percentage: 40
+    puzzles:
+      - text: "AKU MAKAN"
+        shift: 4
+      - text: "BURUNG MERPATI"
+        shift: 2
+      - text: "HUJAN DERAS"
+        shift: "random"
+      - text: "PESTA RAKYAT"
+        shift: 7
+      - text: "PANTAI INDAH"
+      - text: "KUE LAPIS"
+        shift: 5
+      - text: "JALAN SETAPAK"
+        shift: "random"
+      - text: "BOLA BASKET"
+        shift: 1
+      - text: "MALAM MINGGU"
+        shift: 3
+      - text: "KOPI SUSU"
+        shift: "random"
+  medium:
+    points: 20
+    hide_percentage: 50
+    puzzles:
+      - text: "LINGKARAN SETAN"
+        shift: "random"
+      - text: "JEMBATAN LAYANG"
+        shift: 6
+      - text: "KOMPUTER CANGGIH"
+        shift: "random"
+      - text: "SEPEDA MOTOR"
+        shift: 8
+      - text: "PULAU DEWATA"
+        shift: "random"
+  hard:
+    points: 30
+    hide_percentage: 60
+    puzzles:
+      - text: "KECERDASAN BUATAN"
+        shift: "random"
+      - text: "REPUBLIK INDONESIA"
+        shift: 8
+      - text: "GUNUNG BERAPI"
+        shift: "random"
+      - text: "PEMROGRAMAN KOMPUTER"
+        shift: 5
+  veryhard:
+    points: 40
+    hide_percentage: 70
+    puzzles:
+      - text: "BHINNEKA TUNGGAL IKA"
+        shift: "random"
+      - text: "KRIPTOGRAFI MODERN"
+        shift: 10
+      - text: "KONFERENSI MEJA BUNDAR"
+        shift: "random"
