@@ -236,12 +236,8 @@ func (h *BotHandler) handleSurrenderCommand(message *tgbotapi.Message, user *sto
 	}
 
 	puzzle.RevealAll()
-	// 2. Render puzzle yang sudah lengkap
-	finalText := "```\n" + puzzle.RenderDisplay() + "\n```"
-	// 3. EDIT pesan puzzle yang asli
+	finalText := "`" + puzzle.RenderDisplay() + "`"
 	h.editMessage(message.Chat.ID, puzzle.MessageID, finalText, tgbotapi.ModeMarkdownV2)
-
-	// 4. Hapus sesi setelah semuanya selesai
 	delete(h.activePuzzles, message.Chat.ID)
 
 	params := map[string]string{"answer": puzzle.Solution}
@@ -263,7 +259,7 @@ func (h *BotHandler) handleCryptoCommand(message *tgbotapi.Message, user *storag
 	introText := h.translator.Translate(user.LanguageCode, "new_puzzle", params)
 	h.sendMessage(message.Chat.ID, introText, "")
 
-	puzzleText := "```\n" + puzzle.RenderDisplay() + "\n```"
+	puzzleText := "`" + puzzle.RenderDisplay() + "`"
 	sentMsg, err := h.sendMessage(message.Chat.ID, puzzleText, tgbotapi.ModeMarkdownV2)
 	if err != nil {
 		log.Printf("Failed to send puzzle message: %v", err)
@@ -272,6 +268,7 @@ func (h *BotHandler) handleCryptoCommand(message *tgbotapi.Message, user *storag
 	puzzle.MessageID = sentMsg.MessageID
 	h.activePuzzles[message.Chat.ID] = puzzle
 }
+
 func (h *BotHandler) editMessage(chatID int64, messageID int, text string, parseMode string) {
 	msg := tgbotapi.NewEditMessageText(chatID, messageID, text)
 	if parseMode != "" {
