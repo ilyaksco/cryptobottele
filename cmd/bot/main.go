@@ -41,13 +41,19 @@ func main() {
 	
 	gameSvc := game.NewService(gameCfg)
 
+	themeCfg, err := game.LoadThemes("themes.yaml")
+	if err != nil {
+		log.Fatalf("Failed to load themes configuration: %v", err)
+	}
+	log.Println("Themes configuration loaded successfully.")
+
 	api, err := tgbotapi.NewBotAPI(cfg.TelegramBotToken)
 	if err != nil {
 		log.Fatalf("Failed to connect to Telegram: %v", err)
 	}
 	log.Printf("Authorized on account %s", api.Self.UserName)
 
-	handler := bot.NewBotHandler(api, translator, cfg, db, gameSvc)
+	handler := bot.NewBotHandler(api, translator, cfg, db, gameSvc, themeCfg)
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60

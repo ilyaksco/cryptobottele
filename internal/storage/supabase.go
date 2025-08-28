@@ -15,6 +15,8 @@ type User struct {
 	Username     string `json:"username,omitempty"`
 	LanguageCode string `json:"language_code"`
 	Score        int64  `json:"score"`
+	ProfileTheme string `json:"profile_theme,omitempty"`
+
 }
 
 type Storage struct {
@@ -86,3 +88,11 @@ func (s *Storage) GetTopUsers(limit int) ([]User, error) {
 	}
 	return results, nil
 }
+
+// vvv FUNGSI BARU DITAMBAHKAN vvv
+func (s *Storage) UpdateUserProfileTheme(userID int64, theme string) error {
+	updateData := map[string]string{"profile_theme": theme}
+	_, _, err := s.client.From("users").Update(updateData, "", "minimal").Eq("id", fmt.Sprintf("%d", userID)).Execute()
+	return err
+}
+// ^^^ FUNGSI BARU DITAMBAHKAN ^^^

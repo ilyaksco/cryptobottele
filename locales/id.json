@@ -22,5 +22,14 @@
   "profile_info": "👤 <b>Profil Pengguna</b>\n\n<b>Nama:</b> {name}\n<b>Skor:</b> {score} poin",
   "leaderboard_title": "🏆 <b>Papan Peringkat Global</b> 🏆\n\n",
   "leaderboard_entry": "{rank}. {name} - <b>{score} poin</b>\n",
-  "play_again_button": "🎮 Main Lagi"
+  "play_again_button": "🎮 Main Lagi",
+  "market_intro": "🛒 <b>Selamat Datang di Market!</b> 🛒\n\nGunakan poin yang sudah kamu kumpulkan untuk membeli item-item keren di bawah ini.",
+  "market_item_matrix": "<b>Kartu Profil Matrix</b> - 500 Poin\nUbah tampilan profilmu jadi lebih keren!\n\nUntuk membeli, ketik:\n<code>/market beli matrix</code>",
+  "market_purchase_success": "✅ <b>Pembelian Berhasil!</b>\n\nKamu telah membeli <b>{item}</b>. Coba cek <code>/profile</code> sekarang!",
+  "market_not_enough_points": "❌ <b>Gagal!</b>\n\nPoinmu tidak cukup untuk membeli item ini.",
+  "market_already_owned": "👍 <b>Info</b>\n\nKamu sudah memiliki item ini.",
+  "theme_matrix_desc": "Tampilan profil digital dengan gaya hacker matrix.",
+  "market_button_buy": "Beli ({price} Poin)",
+  "market_button_back": "Kembali ke Market",
+  "market_preview_owned": "✅ Sudah Dimiliki"
 }

@@ -22,5 +22,10 @@
   "profile_info": "👤 <b>User Profile</b>\n\n<b>Name:</b> {name}\n<b>Score:</b> {score} points",
   "leaderboard_title": "🏆 <b>Global Leaderboard</b> 🏆\n\n",
   "leaderboard_entry": "{rank}. {name} - <b>{score} points</b>\n",
-  "play_again_button": "🎮 Play Again"
+  "play_again_button": "🎮 Play Again",
+  "market_intro": "🛒 <b>Welcome to the Market!</b> 🛒\n\nUse the points you've collected to buy cool items below.",
+  "market_item_matrix": "<b>Matrix Profile Card</b> - 500 Points\nChange your profile's look to something cooler!\n\nTo buy, type:\n<code>/market beli matrix</code>",
+  "market_purchase_success": "✅ <b>Purchase Successful!</b>\n\nYou have bought the <b>{item}</b>. Check out your <code>/profile</code> now!",
+  "market_not_enough_points": "❌ <b>Failed!</b>\n\nYou don't have enough points to buy this item.",
+  "market_already_owned": "👍 <b>Info</b>\n\nYou already own this item."
 }

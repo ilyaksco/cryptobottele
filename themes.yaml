@@ -1,0 +1,66 @@
+themes:
+  - id: "default"
+    price: 0
+    en:
+      name: "Standard"
+      description: "Just the essentials. A clean and simple look for your profile."
+      template: "👤 <b>User Profile</b>\n\n<b>Name:</b> {name}\n<b>Score:</b> {score} points"
+    id_locale:
+      name: "Standar"
+      description: "Tampilan profil yang simpel dan langsung ke intinya."
+      template: "👤 <b>Profil Pengguna</b>\n\n<b>Nama:</b> {name}\n<b>Skor:</b> {score} poin"
+
+  - id: "matrix"
+    price: 500
+    en:
+      name: "🔥 The Matrix"
+      description: "A digital stream of code. Perfect for the elite cryptographer."
+      template: "<code>╔═════════════════════════╗\n║ [root@telegram ~]# userinfo\n╟─────────────────────────╢\n║ 💻 USER: {name}\n║ 📈 SCORE: {score} pts\n╚═════════════════════════╝</code>"
+    id_locale:
+      name: "🔥 The Matrix"
+      description: "Aliran kode digital. Sempurna untuk para ahli kriptografi elit."
+      template: "<code>╔═════════════════════════╗\n║ [root@telegram ~]# info_user\n╟─────────────────────────╢\n║ 💻 NAMA: {name}\n║ 📈 SKOR: {score} poin\n╚═════════════════════════╝</code>"
+
+  - id: "galaxy"
+    price: 750
+    en:
+      name: "✨ Cosmic Traveler"
+      description: "Your achievements, written in the stars across the galaxy."
+      template: "<code>.·:*¨¨*:·. 🚀 .·:*¨¨*:·.\n\n  N A M E : {name}\n  S C O R E : {score} pts\n\n.·:*¨¨*:·. 💫 .·:*¨¨*:·.</code>"
+    id_locale:
+      name: "✨ Penjelajah Kosmik"
+      description: "Pencapaianmu tertulis di antara bintang-bintang di galaksi."
+      template: "<code>.·:*¨¨*:·. 🚀 .·:*¨¨*:·.\n\n  N A M A : {name}\n  S K O R : {score} poin\n\n.·:*¨¨*:·. 💫 .·:*¨¨*:·.</code>"
+
+  - id: "gold"
+    price: 1200
+    en:
+      name: "👑 Gold Prestige"
+      description: "An elegant and luxurious theme for the true high-scorer."
+      template: "<code>╭ ─── • ⚜️ • ─── ╮\n   PLAYER: {name}\n   SCORE: {score} pts\n╰ ─── • ⚜️ • ─── ╯</code>"
+    id_locale:
+      name: "👑 Prestise Emas"
+      description: "Tampilan mewah dan elegan untuk para pemain dengan skor tertinggi."
+      template: "<code>╭ ─── • ⚜️ • ─── ╮\n   PEMAIN: {name}\n   SKOR: {score} poin\n╰ ─── • ⚜️ • ─── ╯</code>"
+
+  - id: "cat"
+    price: 400
+    en:
+      name: "🐾 Meow"
+      description: "A cute, adorable, and slightly mischievous profile theme."
+      template: "<code>      ╱|、\n    (˚ˎ 。7  Meow, {name}!\n     |、˜〵  Your score is {score} pts!\n    じしˍ,)ノ</code>"
+    id_locale:
+      name: "🐾 Meow"
+      description: "Tampilan profil yang lucu, menggemaskan, dan sedikit usil."
+      template: "<code>      ╱|、\n    (˚ˎ 。7  Meow, {name}!\n     |、˜〵  Skormu {score} poin!\n    じしˍ,)ノ</code>"
+  # vvv TAMBAHKAN TEMA BARU INI vvv
+  - id: "starlight"
+    price: 950
+    en:
+      name: "✮ Starlight Dream"
+      description: "A dreamy and magical theme, crafted from stardust."
+      template: "<code>✮ ⋆ ˚｡𖦹 ⋆｡°✩\n\n   PLAYER: {name}\n   SCORE: {score} pts\n\n✮ ⋆ ˚｡𖦹 ⋆｡°✩</code>"
+    id_locale:
+      name: "✮ Mimpi Cahaya Bintang"
+      description: "Tema magis yang memesona, dibuat dari debu bintang."
+      template: "<code>✮ ⋆ ˚｡𖦹 ⋆｡°✩\n\n   PEMAIN: {name}\n   SKOR: {score} poin\n\n✮ ⋆ ˚｡𖦹 ⋆｡°✩</code>"
