@@ -27,5 +27,18 @@
   "market_item_matrix": "<b>Matrix Profile Card</b> - 500 Points\nChange your profile's look to something cooler!\n\nTo buy, type:\n<code>/market beli matrix</code>",
   "market_purchase_success": "✅ <b>Purchase Successful!</b>\n\nYou have bought the <b>{item}</b>. Check out your <code>/profile</code> now!",
   "market_not_enough_points": "❌ <b>Failed!</b>\n\nYou don't have enough points to buy this item.",
-  "market_already_owned": "👍 <b>Info</b>\n\nYou already own this item."
+  "market_already_owned": "👍 <b>Info</b>\n\nYou already own this item.",
+  "market_category_themes": "🎨 Profile Themes",
+  "market_category_powerups": "⚡ Power-ups",
+  "market_powerups_intro": "⚡ <b>Power-ups</b> ⚡\n\nSelect an item to purchase:",
+  "market_back_to_main": "⬅️ Back to Market",
+  "powerup_purchase_success": "✅ <b>Purchase Successful!</b>\n\nYou have bought <b>{item}</b>. Use /powerups during a game.",
+  "no_powerups": "You don't have any power-ups. Visit the /market to buy some.",
+  "powerups_intro": "🎒 <b>Your Power-ups</b> 🎒\n\nSelect a power-up to use:",
+  "use_powerup_button": "Use: {name} ({count})",
+  "powerup_used_success": "⚡ <b>Power-up Used!</b> ⚡\nA '{char}' has been revealed for you.",
+  "powerup_no_effect": "This power-up has no effect right now (no hidden letters left).",
+  "powerup_not_enough": "❌ <b>Failed!</b>\n\nYou do not own this power-up.",
+  "powerup_no_active_puzzle": "Power-ups can only be used when a puzzle is active."
+
 }

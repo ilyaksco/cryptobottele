@@ -16,6 +16,8 @@ type User struct {
 	LanguageCode string `json:"language_code"`
 	Score        int64  `json:"score"`
 	ProfileTheme string `json:"profile_theme,omitempty"`
+	RevealLetter   int    `json:"reveal_letter,omitempty"`
+
 
 }
 
@@ -95,4 +97,27 @@ func (s *Storage) UpdateUserProfileTheme(userID int64, theme string) error {
 	_, _, err := s.client.From("users").Update(updateData, "", "minimal").Eq("id", fmt.Sprintf("%d", userID)).Execute()
 	return err
 }
-// ^^^ FUNGSI BARU DITAMBAHKAN ^^^
+
+func (s *Storage) UpdateUserPowerUp(userID int64, powerUpType string, amount int) error {
+	user, err := s.GetUser(userID)
+	if err != nil {
+		return fmt.Errorf("could not get user to update power-up: %w", err)
+	}
+
+	var currentAmount int
+	switch powerUpType {
+	case "reveal_letter":
+		currentAmount = user.RevealLetter
+	default:
+		return fmt.Errorf("unknown power-up type: %s", powerUpType)
+	}
+
+	newAmount := currentAmount + amount
+	if newAmount < 0 {
+		newAmount = 0
+	}
+
+	updateData := map[string]int{powerUpType: newAmount}
+	_, _, err = s.client.From("users").Update(updateData, "", "minimal").Eq("id", fmt.Sprintf("%d", userID)).Execute()
+	return err
+}

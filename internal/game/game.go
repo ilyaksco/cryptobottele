@@ -231,3 +231,31 @@ func toSuperscript(n int) string {
 	}
 	return result.String()
 }
+
+// File: internal/game/game.go
+
+// ▼▼▼ ADD THIS NEW FUNCTION AT THE END OF THE FILE ▼▼▼
+func (p *Puzzle) RevealRandomChar() (revealedChar rune, success bool) {
+	var hiddenIndices []int
+	for i, pc := range p.Chars {
+		if pc.IsHidden && !pc.IsGuessed {
+			hiddenIndices = append(hiddenIndices, i)
+		}
+	}
+
+	if len(hiddenIndices) == 0 {
+		return 0, false
+	}
+
+	rand.Shuffle(len(hiddenIndices), func(i, j int) {
+		hiddenIndices[i], hiddenIndices[j] = hiddenIndices[j], hiddenIndices[i]
+	})
+	
+	revealIndex := hiddenIndices[0]
+	revealedChar = p.Chars[revealIndex].Char
+	
+	p.UpdateState(string(revealedChar))
+
+	return revealedChar, true
+}
+// ▲▲▲ ADD THIS NEW FUNCTION AT THE END OF THE FILE ▲▲▲

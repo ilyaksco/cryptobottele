@@ -1,0 +1,9 @@
+powerups:
+  - id: "reveal_letter"
+    price: 50
+    en:
+      name: "Reveal Letter"
+      description: "Instantly reveals one random hidden letter in the current puzzle."
+    id_locale:
+      name: "Bocoran Huruf"
+      description: "Langsung membuka satu huruf acak yang tersembunyi di puzzle saat ini."

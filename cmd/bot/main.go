@@ -38,7 +38,7 @@ func main() {
 		log.Fatalf("Failed to initialize translator: %v", err)
 	}
 	log.Println("Translator initialized successfully.")
-	
+
 	gameSvc := game.NewService(gameCfg)
 
 	themeCfg, err := game.LoadThemes("themes.yaml")
@@ -47,13 +47,19 @@ func main() {
 	}
 	log.Println("Themes configuration loaded successfully.")
 
+	powerupCfg, err := game.LoadPowerups("powerups.yaml")
+	if err != nil {
+		log.Fatalf("Failed to load powerups configuration: %v", err)
+	}
+	log.Println("Powerups configuration loaded successfully.")
+
 	api, err := tgbotapi.NewBotAPI(cfg.TelegramBotToken)
 	if err != nil {
 		log.Fatalf("Failed to connect to Telegram: %v", err)
 	}
 	log.Printf("Authorized on account %s", api.Self.UserName)
 
-	handler := bot.NewBotHandler(api, translator, cfg, db, gameSvc, themeCfg)
+	handler := bot.NewBotHandler(api, translator, cfg, db, gameSvc, themeCfg, powerupCfg)
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60

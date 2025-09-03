@@ -31,5 +31,17 @@
   "theme_matrix_desc": "Tampilan profil digital dengan gaya hacker matrix.",
   "market_button_buy": "Beli ({price} Poin)",
   "market_button_back": "Kembali ke Market",
-  "market_preview_owned": "✅ Sudah Dimiliki"
+  "market_preview_owned": "✅ Sudah Dimiliki",
+  "market_category_themes": "🎨 Tema Profil",
+  "market_category_powerups": "⚡ Power-ups",
+  "market_powerups_intro": "⚡ <b>Power-ups</b> ⚡\n\nPilih item untuk dibeli:",
+  "market_back_to_main": "⬅️ Kembali ke Market",
+  "powerup_purchase_success": "✅ <b>Pembelian Berhasil!</b>\n\nKamu telah membeli <b>{item}</b>. Gunakan /powerups saat bermain.",
+  "no_powerups": "Kamu tidak punya power-up. Kunjungi /market untuk membeli.",
+  "powerups_intro": "🎒 <b>Power-up Kamu</b> 🎒\n\nPilih power-up untuk digunakan:",
+  "use_powerup_button": "Gunakan: {name} ({count})",
+  "powerup_used_success": "⚡ <b>Power-up Digunakan!</b> ⚡\nHuruf '{char}' telah dibuka untukmu.",
+  "powerup_no_effect": "Power-up ini tidak berpengaruh saat ini (tidak ada huruf tersembunyi).",
+  "powerup_not_enough": "❌ <b>Gagal!</b>\n\nKamu tidak memiliki power-up ini.",
+  "powerup_no_active_puzzle": "Power-up hanya bisa digunakan saat ada puzzle yang aktif."
 }

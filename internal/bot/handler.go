@@ -21,14 +21,15 @@ type BotHandler struct {
 	config        *config.Config
 	storage       *storage.Storage
 	gameSvc       *game.Service
-	themeConfig   *game.ThemeConfig // vvv DITAMBAHKAN vvv
+	themeConfig   *game.ThemeConfig 
+	powerupConfig *game.PowerupConfig
 	activePuzzles map[int64]*game.Puzzle
 	mu            sync.Mutex
 
 	
 }
 
-func NewBotHandler(bot *tgbotapi.BotAPI, trans *i18n.Translator, cfg *config.Config, store *storage.Storage, gameSvc *game.Service, themeCfg *game.ThemeConfig) *BotHandler {
+func NewBotHandler(bot *tgbotapi.BotAPI, trans *i18n.Translator, cfg *config.Config, store *storage.Storage, gameSvc *game.Service, themeCfg *game.ThemeConfig, powerupCfg *game.PowerupConfig) *BotHandler {
 	return &BotHandler{
 		bot:           bot,
 		translator:    trans,
@@ -36,6 +37,7 @@ func NewBotHandler(bot *tgbotapi.BotAPI, trans *i18n.Translator, cfg *config.Con
 		storage:       store,
 		gameSvc:       gameSvc,
 		themeConfig:   themeCfg,
+		powerupConfig: powerupCfg,
 		activePuzzles: make(map[int64]*game.Puzzle),
 		
 	}
@@ -86,7 +88,7 @@ func (h *BotHandler) HandleUpdate(update tgbotapi.Update) {
 func (h *BotHandler) handleCallbackQuery(query *tgbotapi.CallbackQuery, user *storage.User) {
 
 
-	if strings.HasPrefix(query.Data, "market_") {
+	if strings.HasPrefix(query.Data, "market_") || strings.HasPrefix(query.Data, "powerup_") {
 		h.handleMarketCallback(query, user)
 		return
 	}
@@ -127,118 +129,212 @@ func (h *BotHandler) handleCallbackQuery(query *tgbotapi.CallbackQuery, user *st
 
     h.bot.Request(tgbotapi.NewCallback(query.ID, ""))
 }
-// ^^^ GANTI DENGAN FUNGSI INI ^^^
+
+// ▼▼▼ FUNGSI-FUNGSI BARU DITAMBAHKAN ▼▼▼
 func (h *BotHandler) handleMarketCallback(query *tgbotapi.CallbackQuery, user *storage.User) {
 	h.bot.Request(tgbotapi.NewCallback(query.ID, ""))
 
-	action := strings.Split(query.Data, "_")
-	command := action[1]
+	dataParts := strings.SplitN(query.Data, "_", 3)
+	command := dataParts[0]
+	subcommand := dataParts[1]
+	var args []string
+	if len(dataParts) > 2 {
+		args = append(args, dataParts[2])
+	}
+
+	log.Printf("Handling market callback: command=%s, subcommand=%s, args=%v", command, subcommand, args)
 
 	currentUser, err := h.storage.GetUser(user.ID)
 	if err != nil {
-		log.Printf("Failed to get user for market callback: %v", err)
+		log.Printf("Error getting user for market callback: %v", err)
 		return
 	}
 
 	switch command {
+	case "market":
+		h.handleMarketNavigation(query, currentUser, subcommand, args)
+	case "powerup":
+		h.handlePowerupActions(query, currentUser, subcommand, args)
+	}
+}
+
+func (h *BotHandler) handleMarketNavigation(query *tgbotapi.CallbackQuery, user *storage.User, page string, args []string) {
+	switch page {
+	case "themes":
+		text := h.translator.Translate(user.LanguageCode, "market_intro", nil)
+		var keyboardRows [][]tgbotapi.InlineKeyboardButton
+		for _, theme := range h.themeConfig.Themes {
+			if theme.Price > 0 {
+				var themeName string
+				if user.LanguageCode == "id" {
+					themeName = theme.IDLocale.Name
+				} else {
+					themeName = theme.EN.Name
+				}
+				button := tgbotapi.NewInlineKeyboardButtonData(themeName, "market_view_"+theme.ID)
+				keyboardRows = append(keyboardRows, tgbotapi.NewInlineKeyboardRow(button))
+			}
+		}
+		backButtonText := h.translator.Translate(user.LanguageCode, "market_back_to_main", nil)
+		keyboardRows = append(keyboardRows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(backButtonText, "market_main")))
+		markup := tgbotapi.NewInlineKeyboardMarkup(keyboardRows...)
+		msg := tgbotapi.NewEditMessageText(query.Message.Chat.ID, query.Message.MessageID, text)
+		msg.ParseMode = tgbotapi.ModeHTML
+		msg.ReplyMarkup = &markup
+		h.bot.Request(msg)
+
+	case "powerups":
+		text := h.translator.Translate(user.LanguageCode, "market_powerups_intro", nil)
+		var keyboardRows [][]tgbotapi.InlineKeyboardButton
+		for _, powerup := range h.powerupConfig.Powerups {
+			var powerupName string
+			if user.LanguageCode == "id" {
+				powerupName = powerup.IDLocale.Name
+			} else {
+				powerupName = powerup.EN.Name
+			}
+			buttonText := fmt.Sprintf("%s (%d Poin)", powerupName, powerup.Price)
+			button := tgbotapi.NewInlineKeyboardButtonData(buttonText, "market_buypowerup_"+powerup.ID)
+			keyboardRows = append(keyboardRows, tgbotapi.NewInlineKeyboardRow(button))
+		}
+		backButtonText := h.translator.Translate(user.LanguageCode, "market_back_to_main", nil)
+		keyboardRows = append(keyboardRows, tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(backButtonText, "market_main")))
+		markup := tgbotapi.NewInlineKeyboardMarkup(keyboardRows...)
+		msg := tgbotapi.NewEditMessageText(query.Message.Chat.ID, query.Message.MessageID, text)
+		msg.ParseMode = tgbotapi.ModeHTML
+		msg.ReplyMarkup = &markup
+		h.bot.Request(msg)
+
 	case "view":
-		themeID := action[2]
-		var selectedTheme *game.Theme
+		themeID := args[0]
+		var selectedTheme *game.MarketItem
 		for i := range h.themeConfig.Themes {
 			if h.themeConfig.Themes[i].ID == themeID {
 				selectedTheme = &h.themeConfig.Themes[i]
 				break
 			}
 		}
-
-		if selectedTheme == nil { return }
-
-		var localeData game.ThemeLocale
-		if currentUser.LanguageCode == "id" {
-			localeData = selectedTheme.IDLocale // Menggunakan nama field yang sudah diperbaiki
+		if selectedTheme == nil {
+			return
+		}
+		var localeData game.ItemLocale
+		if user.LanguageCode == "id" {
+			localeData = selectedTheme.IDLocale
 		} else {
 			localeData = selectedTheme.EN
 		}
-
 		themeName := localeData.Name
 		themeDesc := localeData.Description
-		previewParams := map[string]string{"name": currentUser.FirstName, "score": strconv.FormatInt(currentUser.Score, 10)}
+		previewParams := map[string]string{"name": user.FirstName, "score": strconv.FormatInt(user.Score, 10)}
 		profilePreview := localeData.Template
 		for k, v := range previewParams {
 			profilePreview = strings.ReplaceAll(profilePreview, "{"+k+"}", v)
 		}
-
 		var previewTextBuilder strings.Builder
 		previewTextBuilder.WriteString(fmt.Sprintf("<b>%s</b>\n", themeName))
 		previewTextBuilder.WriteString(fmt.Sprintf("<i>%s</i>\n\n", themeDesc))
 		previewTextBuilder.WriteString("<b>Pratinjau:</b>\n")
 		previewTextBuilder.WriteString(profilePreview)
-
 		var buttons []tgbotapi.InlineKeyboardButton
-		buyButtonText := h.translator.Translate(currentUser.LanguageCode, "market_button_buy", map[string]string{"price": strconv.Itoa(selectedTheme.Price)})
-		
-		if currentUser.ProfileTheme == selectedTheme.ID {
-			buyButtonText = h.translator.Translate(currentUser.LanguageCode, "market_preview_owned", nil)
+		buyButtonText := h.translator.Translate(user.LanguageCode, "market_button_buy", map[string]string{"price": strconv.Itoa(selectedTheme.Price)})
+		if user.ProfileTheme == selectedTheme.ID {
+			buyButtonText = h.translator.Translate(user.LanguageCode, "market_preview_owned", nil)
 			buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(buyButtonText, "noop"))
 		} else {
-			buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(buyButtonText, "market_buy_"+selectedTheme.ID))
+			buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(buyButtonText, "market_buytheme_"+selectedTheme.ID))
 		}
-		
-		backButtonText := h.translator.Translate(currentUser.LanguageCode, "market_button_back", nil)
-		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(backButtonText, "market_main"))
-		
+		backButtonText := h.translator.Translate(user.LanguageCode, "market_button_back", nil)
+		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(backButtonText, "market_themes"))
 		markup := tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(buttons...))
 		msg := tgbotapi.NewEditMessageText(query.Message.Chat.ID, query.Message.MessageID, previewTextBuilder.String())
 		msg.ParseMode = tgbotapi.ModeHTML
 		msg.ReplyMarkup = &markup
 		h.bot.Request(msg)
 
-	case "buy":
-		themeID := action[2]
-		var selectedTheme *game.Theme
+	case "buytheme":
+		themeID := args[0]
+		var selectedTheme *game.MarketItem
 		for i := range h.themeConfig.Themes {
 			if h.themeConfig.Themes[i].ID == themeID {
 				selectedTheme = &h.themeConfig.Themes[i]
 				break
 			}
 		}
-		if selectedTheme == nil { return }
-
-		if currentUser.ProfileTheme == selectedTheme.ID {
-			responseText := h.translator.Translate(currentUser.LanguageCode, "market_already_owned", nil)
+		if selectedTheme == nil {
+			return
+		}
+		if user.ProfileTheme == selectedTheme.ID {
+			responseText := h.translator.Translate(user.LanguageCode, "market_already_owned", nil)
 			h.sendMessage(query.Message.Chat.ID, responseText, tgbotapi.ModeHTML)
 			return
 		}
-
 		cost := int64(selectedTheme.Price)
-		if currentUser.Score < cost {
-			responseText := h.translator.Translate(currentUser.LanguageCode, "market_not_enough_points", nil)
+		if user.Score < cost {
+			responseText := h.translator.Translate(user.LanguageCode, "market_not_enough_points", nil)
 			h.sendMessage(query.Message.Chat.ID, responseText, tgbotapi.ModeHTML)
 			return
 		}
-
-		h.storage.IncreaseUserScore(currentUser.ID, -int(cost))
-		h.storage.UpdateUserProfileTheme(currentUser.ID, selectedTheme.ID)
-		
+		h.storage.IncreaseUserScore(user.ID, -int(cost))
+		h.storage.UpdateUserProfileTheme(user.ID, selectedTheme.ID)
 		var themeName string
-		if currentUser.LanguageCode == "id" {
-			themeName = selectedTheme.IDLocale.Name // Menggunakan nama field yang sudah diperbaiki
+		if user.LanguageCode == "id" {
+			themeName = selectedTheme.IDLocale.Name
 		} else {
 			themeName = selectedTheme.EN.Name
 		}
-
-		responseText := h.translator.Translate(currentUser.LanguageCode, "market_purchase_success", map[string]string{"item": themeName})
+		responseText := h.translator.Translate(user.LanguageCode, "market_purchase_success", map[string]string{"item": themeName})
 		h.sendMessage(query.Message.Chat.ID, responseText, tgbotapi.ModeHTML)
-
 		deleteMsg := tgbotapi.NewDeleteMessage(query.Message.Chat.ID, query.Message.MessageID)
 		h.bot.Request(deleteMsg)
+
+	case "buypowerup":
+		powerupID := args[0]
+		var selectedPowerup *game.MarketItem
+		for i := range h.powerupConfig.Powerups {
+			if h.powerupConfig.Powerups[i].ID == powerupID {
+				selectedPowerup = &h.powerupConfig.Powerups[i]
+				break
+			}
+		}
+		if selectedPowerup == nil {
+			return
+		}
+		cost := int64(selectedPowerup.Price)
+		if user.Score < cost {
+			responseText := h.translator.Translate(user.LanguageCode, "market_not_enough_points", nil)
+			h.sendMessage(query.Message.Chat.ID, responseText, tgbotapi.ModeHTML)
+			return
+		}
+		h.storage.IncreaseUserScore(user.ID, -int(cost))
+		h.storage.UpdateUserPowerUp(user.ID, selectedPowerup.ID, 1)
+		var powerupName string
+		if user.LanguageCode == "id" {
+			powerupName = selectedPowerup.IDLocale.Name
+		} else {
+			powerupName = selectedPowerup.EN.Name
+		}
+		responseText := h.translator.Translate(user.LanguageCode, "powerup_purchase_success", map[string]string{"item": powerupName})
+		h.sendMessage(query.Message.Chat.ID, responseText, tgbotapi.ModeHTML)
 
 	case "main":
 		deleteMsg := tgbotapi.NewDeleteMessage(query.Message.Chat.ID, query.Message.MessageID)
 		h.bot.Request(deleteMsg)
-		h.handleMarketCommand(query.Message, currentUser)
+		h.handleMarketCommand(query.Message, user)
 	}
 }
+
+func (h *BotHandler) handlePowerupActions(query *tgbotapi.CallbackQuery, user *storage.User, action string, args []string) {
+	switch action {
+	case "use":
+		powerupID := args[0]
+		h.usePowerup(query.Message, user, powerupID)
+		deleteMsg := tgbotapi.NewDeleteMessage(query.Message.Chat.ID, query.Message.MessageID)
+		h.bot.Request(deleteMsg)
+	}
+}
+// ▲▲▲ FUNGSI-FUNGSI BARU DITAMBAHKAN ▲▲▲
+
+// ^^^ GANTI DENGAN FUNGSI INI ^^^
 
 
 func (h *BotHandler) handleGuess(message *tgbotapi.Message, user *storage.User, puzzle *game.Puzzle) {
@@ -325,6 +421,8 @@ func (h *BotHandler) handleCommand(message *tgbotapi.Message, user *storage.User
 		h.handleLeaderboardCommand(message, user)
 	case "market":
 		h.handleMarketCommand(message, user)
+	case "powerups":
+		h.handlePowerupsCommand(message, user)
 	case "surrender", "menyerah":
 		h.handleSurrenderCommand(message, user)
 	}
@@ -334,27 +432,124 @@ func (h *BotHandler) handleCommand(message *tgbotapi.Message, user *storage.User
 // vvv AWAL PERUBAHAN vvv
 func (h *BotHandler) handleMarketCommand(message *tgbotapi.Message, user *storage.User) {
 	text := h.translator.Translate(user.LanguageCode, "market_intro", nil)
+	themesButtonText := h.translator.Translate(user.LanguageCode, "market_category_themes", nil)
+	powerupsButtonText := h.translator.Translate(user.LanguageCode, "market_category_powerups", nil)
 
-	var keyboardRows [][]tgbotapi.InlineKeyboardButton
-	for _, theme := range h.themeConfig.Themes {
-		if theme.Price > 0 { // Hanya tampilkan tema yang bisa dibeli
-			var themeName string
-			if user.LanguageCode == "id" {
-				themeName = theme.IDLocale.Name // Menggunakan nama field yang sudah diperbaiki
-			} else {
-				themeName = theme.EN.Name
-			}
-			button := tgbotapi.NewInlineKeyboardButtonData(themeName, "market_view_"+theme.ID)
-			keyboardRows = append(keyboardRows, tgbotapi.NewInlineKeyboardRow(button))
-		}
-	}
+	markup := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(themesButtonText, "market_themes"),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(powerupsButtonText, "market_powerups"),
+		),
+	)
 
-	markup := tgbotapi.NewInlineKeyboardMarkup(keyboardRows...)
 	msg := tgbotapi.NewMessage(message.Chat.ID, text)
 	msg.ParseMode = tgbotapi.ModeHTML
 	msg.ReplyMarkup = markup
 	h.bot.Send(msg)
 }
+
+// ▼▼▼ FUNGSI-FUNGSI BARU DITAMBAHKAN ▼▼▼
+func (h *BotHandler) handlePowerupsCommand(message *tgbotapi.Message, user *storage.User) {
+	args := strings.ToLower(strings.TrimSpace(message.CommandArguments()))
+	if args == "reveal" {
+		h.usePowerup(message, user, "reveal_letter")
+		return
+	}
+
+	updatedUser, err := h.storage.GetUser(user.ID)
+	if err != nil {
+		log.Printf("Failed to get updated user for powerups: %v", err)
+		return
+	}
+
+	if updatedUser.RevealLetter <= 0 {
+		responseText := h.translator.Translate(user.LanguageCode, "no_powerups", nil)
+		h.sendMessage(message.Chat.ID, responseText, "") 
+		return
+	}
+
+	text := h.translator.Translate(user.LanguageCode, "powerups_intro", nil)
+	var keyboardRows [][]tgbotapi.InlineKeyboardButton
+
+	if updatedUser.RevealLetter > 0 {
+		var powerup *game.MarketItem
+		for i := range h.powerupConfig.Powerups {
+			if h.powerupConfig.Powerups[i].ID == "reveal_letter" {
+				powerup = &h.powerupConfig.Powerups[i]
+				break
+			}
+		}
+
+		if powerup != nil {
+			var powerupName string
+			if user.LanguageCode == "id" {
+				powerupName = powerup.IDLocale.Name
+			} else {
+				powerupName = powerup.EN.Name
+			}
+			params := map[string]string{
+				"name":  powerupName,
+				"count": strconv.Itoa(updatedUser.RevealLetter),
+			}
+			buttonText := h.translator.Translate(user.LanguageCode, "use_powerup_button", params)
+			button := tgbotapi.NewInlineKeyboardButtonData(buttonText, "powerup_use_reveal_letter")
+			keyboardRows = append(keyboardRows, tgbotapi.NewInlineKeyboardRow(button))
+		}
+	}
+	markup := tgbotapi.NewInlineKeyboardMarkup(keyboardRows...)
+	msg := tgbotapi.NewMessage(message.Chat.ID, text)
+	msg.ParseMode = tgbotapi.ModeHTML // FIX: Menambahkan ParseMode HTML di sini.
+	msg.ReplyMarkup = markup
+	h.bot.Send(msg)
+}
+
+func (h *BotHandler) usePowerup(message *tgbotapi.Message, user *storage.User, powerupID string) {
+	h.mu.Lock()
+	puzzle, isActive := h.activePuzzles[message.Chat.ID]
+	h.mu.Unlock()
+
+	if !isActive {
+		responseText := h.translator.Translate(user.LanguageCode, "powerup_no_active_puzzle", nil)
+		h.sendMessage(message.Chat.ID, responseText, "")
+		return
+	}
+
+	updatedUser, err := h.storage.GetUser(user.ID)
+	if err != nil {
+		log.Printf("Failed to get user to use powerup: %v", err)
+		return
+	}
+
+	var hasPowerup bool
+	if powerupID == "reveal_letter" && updatedUser.RevealLetter > 0 {
+		hasPowerup = true
+	}
+
+	if !hasPowerup {
+		responseText := h.translator.Translate(user.LanguageCode, "powerup_not_enough", nil)
+		h.sendMessage(message.Chat.ID, responseText, tgbotapi.ModeHTML)
+		return
+	}
+
+	revealedChar, success := puzzle.RevealRandomChar()
+	if !success {
+		responseText := h.translator.Translate(user.LanguageCode, "powerup_no_effect", nil)
+		h.sendMessage(message.Chat.ID, responseText, "")
+		return
+	}
+
+	h.storage.UpdateUserPowerUp(user.ID, powerupID, -1)
+
+	params := map[string]string{"char": string(revealedChar)}
+	responseText := h.translator.Translate(user.LanguageCode, "powerup_used_success", params)
+	h.sendMessage(message.Chat.ID, responseText, tgbotapi.ModeHTML)
+
+	newPuzzleText := "`" + puzzle.RenderDisplay() + "`"
+	h.editMessage(message.Chat.ID, puzzle.MessageID, newPuzzleText, tgbotapi.ModeMarkdownV2)
+}
+// ▲▲▲ FUNGSI-FUNGSI BARU DITAMBAHKAN ▲▲▲
 
 func (h *BotHandler) handleHelpCommand(message *tgbotapi.Message, user *storage.User) {
 	text := h.translator.Translate(user.LanguageCode, "help_intro", nil)
@@ -504,7 +699,7 @@ func (h *BotHandler) handleProfileCommand(message *tgbotapi.Message, user *stora
 		"score": strconv.FormatInt(updatedUser.Score, 10),
 	}
 
-	var selectedTheme *game.Theme
+	var selectedTheme *game.MarketItem
 	for i := range h.themeConfig.Themes {
 		if h.themeConfig.Themes[i].ID == updatedUser.ProfileTheme {
 			selectedTheme = &h.themeConfig.Themes[i]
@@ -512,7 +707,6 @@ func (h *BotHandler) handleProfileCommand(message *tgbotapi.Message, user *stora
 		}
 	}
 
-	// Fallback to default theme if not found or is empty
 	if selectedTheme == nil || selectedTheme.ID == "" {
 		for i := range h.themeConfig.Themes {
 			if h.themeConfig.Themes[i].ID == "default" {
@@ -522,9 +716,9 @@ func (h *BotHandler) handleProfileCommand(message *tgbotapi.Message, user *stora
 		}
 	}
 
-	var localeData game.ThemeLocale
+	var localeData game.ItemLocale
 	if updatedUser.LanguageCode == "id" {
-		localeData = selectedTheme.IDLocale // Menggunakan nama field yang sudah diperbaiki
+		localeData = selectedTheme.IDLocale
 	} else {
 		localeData = selectedTheme.EN
 	}
